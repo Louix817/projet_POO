@@ -1,0 +1,125 @@
+import pygame
+import math
+from random import *
+
+
+class Game:
+    def __init__(self):
+        # Initialisation de pygame
+        pygame.init()
+        self.clock = pygame.time.Clock()
+
+        # Dimensions de la fenêtre
+        self.largeur = 638
+        self.hauteur = 320
+        self.screen = pygame.display.set_mode((self.largeur, self.hauteur))
+
+        # Chargement des images et de la police de caractères
+        self.fond = pygame.image.load('img/fond.jpg').convert()
+        self.font = pygame.font.Font('font/elite.ttf', 16)
+        self.balle = Ball(self.largeur, self.hauteur)
+
+        # Variables pour le score
+        self.total_clicks = 0
+        self.successful_clicks = 0
+        self.precision = 0  # Pourcentage de précision de la visée
+
+    def run(self):
+        # Boucle principale du jeu
+        continuer = True
+        while continuer:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    continuer = False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    continuer = False
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    # Incrémenter le nombre total de clics
+                    self.total_clicks += 1
+
+                    # Vérifie si la balle a été cliquée
+                    if self.balle.is_clicked(event.pos):
+                        # Incrémenter le nombre de clics réussis
+                        self.successful_clicks += 1
+                        # Repositionner la balle à un nouvel emplacement
+                        self.balle.reposition()
+
+                    # Calculer le pourcentage de précision
+                    self.update_precision()
+
+            # Mettre à jour la position de la balle
+            self.balle.update()
+
+            # Affichage des objets à l'écran
+            self.screen.blit(self.fond, (0, 0))
+
+            # Afficher le score de précision en bas à droite (là où était "Projet NSI")
+            precision_text = self.font.render(f'Precision: {self.precision:.2f}%', True, pygame.Color(255, 255, 255))
+            self.screen.blit(precision_text, (490, 300))
+
+            # Affichage de la balle
+            self.screen.blit(self.balle.image, (self.balle.x, self.balle.y))
+
+            # Affichage de l'image avec une cadence de 50 images par seconde
+            pygame.display.update()
+            self.clock.tick(50)
+
+        pygame.quit()
+
+    def update_precision(self):
+        """Calculer le pourcentage de précision."""
+        if self.total_clicks > 0:
+            self.precision = (self.successful_clicks / self.total_clicks) * 100
+        else:
+            self.precision = 0  # Si aucun clic n'a été fait, précision à 0
+
+
+class Ball:
+    def __init__(self, largeur, hauteur):
+        # Chargement de l'image de la balle
+        self.image = pygame.image.load('img/balle.png').convert_alpha()
+        self.rect = self.image.get_rect()  # Pour la gestion des collisions avec la souris
+
+        # Dimensions du cadre
+        self.largeur = largeur
+        self.hauteur = hauteur
+
+        # Position et vitesse initiales
+        self.reposition()
+
+    def reposition(self):
+        # Coordonnées de la POSITION initiale de la balle (générées aléatoirement)
+        self.x = random() * (self.largeur - 55)
+        self.y = random() * (self.hauteur - 55)
+
+        # Coordonnées de la VITESSE initiale de la balle (générées aléatoirement)
+        angle = 2 * math.pi * random()
+        self.deltax = 5 * math.cos(angle)
+        self.deltay = 5 * math.sin(angle)
+
+        # Mettre à jour la position du rectangle de collision
+        self.rect.topleft = (self.x, self.y)
+
+    def update(self):
+        # Calcul de la nouvelle position de la balle
+        self.x += self.deltax
+        self.y += self.deltay
+
+        # Rebonds sur les côtés du cadre pour gérer les changements de direction
+        if (self.x > self.largeur - 50 and self.deltax > 0) or (self.x < 0 and self.deltax < 0):
+            self.deltax = -self.deltax
+        if (self.y > self.hauteur - 50 and self.deltay > 0) or (self.y < 0 and self.deltay < 0):
+            self.deltay = -self.deltay
+
+        # Mise à jour de la position du rectangle de collision
+        self.rect.topleft = (self.x, self.y)
+
+    def is_clicked(self, mouse_pos):
+        # Vérifier si la position de la souris se trouve dans le rectangle de la balle
+        return self.rect.collidepoint(mouse_pos)
+
+
+# Lancer le jeu
+if __name__ == "__main__":
+    game = Game()
+    game.run()
