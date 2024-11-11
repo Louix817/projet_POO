@@ -1,0 +1,86 @@
+# Version 1
+
+import pygame
+import math
+from random import *
+
+
+class Game:
+    def __init__(self):
+        # Initialisation de pygame
+        pygame.init()
+        self.clock = pygame.time.Clock()
+
+        # Dimensions de la fenêtre
+        self.largeur = 638
+        self.hauteur = 320
+        self.screen = pygame.display.set_mode((self.largeur, self.hauteur))
+
+        # Chargement des images et de la police de caractères
+        self.fond = pygame.image.load('img/fond.jpg').convert()
+        self.font = pygame.font.Font('font/elite.ttf', 16)
+        self.balle = Ball(self.largeur, self.hauteur)
+
+        # Texte qui sera affiché au bas de la fenêtre
+        WHITE = pygame.Color(255, 255, 255)
+        self.text = self.font.render('Projet NSI', True, WHITE)
+
+    def run(self):
+        # Boucle principale du jeu
+        continuer = True
+        while continuer:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    continuer = False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_SPACE:
+                    continuer = False
+
+            # Mettre à jour la position de la balle
+            self.balle.update()
+
+            # Affichage des objets à l'écran
+            self.screen.blit(self.fond, (0, 0))
+            self.screen.blit(self.text, (490, 300))
+            self.screen.blit(self.balle.image, (self.balle.x, self.balle.y))
+
+            # Affichage de l'image avec une cadence de 50 images par seconde
+            pygame.display.update()
+            self.clock.tick(50)
+
+        pygame.quit()
+
+
+class Ball:
+    def __init__(self, largeur, hauteur):
+        # Chargement de l'image de la balle
+        self.image = pygame.image.load('img/balle.png').convert_alpha()
+
+        # Coordonnées de la POSITION initiale de la balle (générées aléatoirement)
+        self.x = random() * (largeur - 55)
+        self.y = random() * (hauteur - 55)
+
+        # Coordonnées de la VITESSE initiale de la balle (générées aléatoirement)
+        angle = 2 * math.pi * random()
+        self.deltax = 5 * math.cos(angle)
+        self.deltay = 5 * math.sin(angle)
+
+        # Dimensions du cadre
+        self.largeur = largeur
+        self.hauteur = hauteur
+
+    def update(self):
+        # Calcul de la nouvelle position de la balle
+        self.x += self.deltax
+        self.y += self.deltay
+
+        # Rebonds sur les côtés du cadre pour gérer les changements de direction
+        if (self.x > self.largeur - 50 and self.deltax > 0) or (self.x < 0 and self.deltax < 0):
+            self.deltax = -self.deltax
+        if (self.y > self.hauteur - 50 and self.deltay > 0) or (self.y < 0 and self.deltay < 0):
+            self.deltay = -self.deltay
+
+
+# Lancer le jeu
+if __name__ == "__main__":
+    game = Game()
+    game.run()
