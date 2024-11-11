@@ -1,0 +1,194 @@
+# Version 8
+
+import pygame
+import math
+from random import *
+
+class Game:
+    def __init__(self):
+        """Initialise la fenêtre, les éléments du jeu, et les variables de contrôle."""
+        pygame.init()
+        self.clock = pygame.time.Clock()
+        
+        # Dimensions de la fenêtre
+        self.largeur = 638
+        self.hauteur = 320
+        self.screen = pygame.display.set_mode((self.largeur, self.hauteur))
+        
+        # Chargement des images et de la police de caractères
+        self.fond = pygame.image.load('img/fond.jpg').convert()
+        self.font = pygame.font.Font('font/elite.ttf', 16)
+        
+        # Initialiser plusieurs balles
+        self.balles = [Ball(self.largeur, self.hauteur) for _ in range(5)]  # Crée une liste de balles
+        
+        # Variables de jeu pour le score de précision
+        self.total_clicks = 0  # Nombre total de clics de souris
+        self.successful_clicks = 0  # Nombre de clics réussis sur les balles
+        self.precision = 0  # Pourcentage de précision de la visée
+        self.start_time = pygame.time.get_ticks()  # Heure de départ pour le chronomètre
+        
+        # Variables d'état pour le menu et les options
+        self.in_game = False  # Indique si l'on est en mode jeu
+        self.in_options = False  # Indique si l'on est en mode options
+
+    def run(self):
+        """Lance la boucle principale du jeu en fonction de l'état du menu, du jeu, ou des options."""
+        continuer = True
+        while continuer:
+            # Affiche l'interface appropriée en fonction de l'état actuel
+            if not self.in_game and not self.in_options:
+                self.display_menu()  # Affiche le menu d'accueil
+            elif self.in_game:
+                self.play_game()  # Lance le jeu principal
+            elif self.in_options:
+                self.display_options()  # Affiche l'écran des options
+            
+            # Gestion des événements de sortie
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    continuer = False
+                if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
+                    continuer = False
+
+            # Limite la vitesse de rafraîchissement de la boucle
+            self.clock.tick(50)
+        pygame.quit()
+
+    def display_menu(self):
+        """Affiche le menu principal avec les boutons 'Jouer' et 'Options'."""
+        # Affichage du fond d'écran
+        self.screen.blit(self.fond, (0, 0))
+        
+        # Texte des boutons
+        title_text = self.font.render("Bienvenue dans le Jeu!", True, pygame.Color(255, 255, 255))
+        play_button_text = self.font.render("Jouer", True, pygame.Color(255, 255, 255))
+        options_button_text = self.font.render("Options", True, pygame.Color(255, 255, 255))
+        
+        # Positionnement des textes
+        title_rect = title_text.get_rect(center=(self.largeur // 2, self.hauteur // 2 - 50))
+        play_button_rect = play_button_text.get_rect(center=(self.largeur // 2, self.hauteur // 2))
+        options_button_rect = options_button_text.get_rect(center=(self.largeur // 2, self.hauteur // 2 + 30))
+        
+        # Afficher les boutons à l'écran
+        self.screen.blit(title_text, title_rect)
+        self.screen.blit(play_button_text, play_button_rect)
+        self.screen.blit(options_button_text, options_button_rect)
+        
+        pygame.display.flip()
+        
+        # Gestion des clics pour lancer le jeu ou les options
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if play_button_rect.collidepoint(event.pos):
+                    self.in_game = True  # Passe en mode jeu
+                elif options_button_rect.collidepoint(event.pos):
+                    self.in_options = True  # Passe en mode options
+
+    def display_options(self):
+        """Affiche l'écran des options avec un bouton 'Retour' pour revenir au menu principal."""
+        # Affichage du fond d'écran
+        self.screen.blit(self.fond, (0, 0))
+        
+        # Texte du bouton retour
+        back_button_text = self.font.render("Retour", True, pygame.Color(255, 255, 255))
+        back_button_rect = back_button_text.get_rect(center=(self.largeur // 2, self.hauteur // 2))
+        
+        # Afficher le bouton retour
+        self.screen.blit(back_button_text, back_button_rect)
+        pygame.display.flip()
+        
+        # Gestion du clic pour revenir au menu principal
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                if back_button_rect.collidepoint(event.pos):
+                    self.in_options = False  # Revient au menu principal
+
+    def play_game(self):
+        """Lance le jeu avec les interactions de clics, mises à jour et affichage des balles."""
+        for event in pygame.event.get():
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                self.total_clicks += 1  # Incrémente le nombre total de clics
+                for balle in self.balles:
+                    if balle.is_clicked(event.pos):
+                        self.successful_clicks += 1  # Incrémente le nombre de clics réussis
+                        balle.reposition()  # Repositionne la balle cliquée
+                        break
+                self.update_precision()  # Met à jour la précision des clics
+
+        # Met à jour la position et les collisions des balles
+        self.check_collisions()
+        for balle in self.balles:
+            balle.update()
+
+        # Affichage du fond, de la précision et du chronomètre
+        self.screen.blit(self.fond, (0, 0))
+        precision_text = self.font.render(f'Precision: {self.precision:.2f}%', True, pygame.Color(255, 255, 255))
+        self.screen.blit(precision_text, (490, 300))
+        
+        current_time = (pygame.time.get_ticks() - self.start_time) / 1000  # Temps écoulé en secondes
+        time_text = self.font.render(f'Time: {current_time}', True, pygame.Color(255, 255, 255))
+        self.screen.blit(time_text, (0, 0))
+        
+        # Affiche chaque balle à sa position mise à jour
+        for balle in self.balles:
+            self.screen.blit(balle.image, (balle.x, balle.y))
+
+        pygame.display.update()
+
+    def update_precision(self):
+        """Calculer le pourcentage de précision basé sur les clics réussis et les clics totaux."""
+        if self.total_clicks > 0:
+            self.precision = (self.successful_clicks / self.total_clicks) * 100
+        else:
+            self.precision = 0  # Précision à 0 si aucun clic n'a été effectué
+
+    def check_collisions(self):
+        """Gère les collisions entre les balles en échangeant leurs directions."""
+        for i in range(len(self.balles)):
+            for j in range(i + 1, len(self.balles)):
+                balle1 = self.balles[i]
+                balle2 = self.balles[j]
+                dx = balle2.x - balle1.x
+                dy = balle2.y - balle1.y
+                distance = math.sqrt(dx ** 2 + dy ** 2)
+                if distance < 50:
+                    # Échange les directions des balles en cas de collision
+                    balle1.deltax, balle2.deltax = balle2.deltax, balle1.deltax
+                    balle1.deltay, balle2.deltay = balle2.deltay, balle1.deltay
+
+class Ball:
+    def __init__(self, largeur, hauteur):
+        """Initialise la balle avec une position et une vitesse aléatoires."""
+        self.image = pygame.image.load('img/balle.png').convert_alpha()
+        self.rect = self.image.get_rect()
+        self.largeur = largeur
+        self.hauteur = hauteur
+        self.reposition()
+
+    def reposition(self):
+        """Repositionne la balle à une position aléatoire et initialise une vitesse aléatoire."""
+        self.x = random() * (self.largeur - 55)
+        self.y = random() * (self.hauteur - 55)
+        angle = 2 * math.pi * random()
+        self.deltax = 5 * math.cos(angle)
+        self.deltay = 5 * math.sin(angle)
+        self.rect.topleft = (self.x, self.y)
+
+    def update(self):
+        """Met à jour la position de la balle et gère les rebonds sur les bords de l'écran."""
+        self.x += self.deltax
+        self.y += self.deltay
+        if (self.x > self.largeur - 50 and self.deltax > 0) or (self.x < 0 and self.deltax < 0):
+            self.deltax = -self.deltax
+        if (self.y > self.hauteur - 50 and self.deltay > 0) or (self.y < 0 and self.deltay < 0):
+            self.deltay = -self.deltay
+        self.rect.topleft = (self.x, self.y)
+
+    def is_clicked(self, mouse_pos):
+        """Vérifie si la balle a été cliquée en vérifiant la collision avec la position de la souris."""
+        return self.rect.collidepoint(mouse_pos)
+
+if __name__ == "__main__":
+    game = Game()
+    game.run()
